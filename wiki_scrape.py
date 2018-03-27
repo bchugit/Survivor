@@ -1,6 +1,7 @@
+# TODO: Fix Kaoh Rong, Ordered season list
 
 from bs4 import BeautifulSoup
-import urllib2
+from urllib.request import urlopen
 import re
 
 import numpy as np
@@ -8,6 +9,8 @@ import pandas as pd
 import itertools as iter
 from IPython import display as dis
 import pickle
+
+current_season_num = 36
 
 def parse_td(td):
     # Extract text from table data element
@@ -20,7 +23,7 @@ def parse_td(td):
     return [td.text[:-1]] * n  # ... repeat text n times
 
 def get_voting_results(url):
-    html= urllib2.urlopen(url)
+    html = urlopen(url)
     soup = BeautifulSoup(html, 'html.parser')
     voting_table = soup.find(id='Voting_History').find_next('table')
     
@@ -29,7 +32,7 @@ def get_voting_results(url):
     # (use iter.chain to flatten list)
     eliminated = list(iter.chain(*[parse_td(i) for i in 
               voting_table
-              .find('th', text=re.compile(r"(Voted Out|Eliminated|Voted Off)"))
+              .find('th', text=re.compile(r"(Voted Out|Voted out|Eliminated|Voted Off)"))
               .findPrevious('tr').findAll('td')]))
     
     # we want all rows after the row that starts with "Vote:"
@@ -52,27 +55,32 @@ def get_voting_results(url):
     votes.columns = [e.strip() for e in eliminated]
     # find the season number
     summary_table = soup.find('table', {'class': "toccolours"})
-    season_num = int(summary_table.find(string=re.compile("Season"))
-                                  .find_next('td')
-                                  .text.strip())
     
+    # Current season does not have number listed, have to hard code
+    try:
+        season_num = int(summary_table.find(string=re.compile("Season No."))
+                                      .find_next('td')
+                                      .text.strip())
+    except (TypeError, AttributeError):
+        season_num = current_season_num
+
     # Embed Jury Vote info into votes table (otherwise inconsistent)
-    # -- to find out how many contestants went to final counsel
+    # -- to find out how many contestants went to final council
     # -- find "Jury Vote" in the episode guide and count the rowspan
     try:
         jury_vote = soup.find(id='Episode_Guide') \
                         .find_next('td', text=re.compile(r"Jury Vote"))
-        num_at_final_counsel = int(jury_vote['rowspan'])
-        if 'Cambodia' not in url:  # This is the current season
-            votes.iloc[:num_at_final_counsel, -num_at_final_counsel:] = "Jury Vote"
-    except TypeError:
+        num_at_final_council = int(jury_vote['rowspan'])
+        if 'Ghost_Island' not in url:  # This is the current season
+            votes.iloc[:num_at_final_council, -num_at_final_council:] = "Jury Vote"
+    except (TypeError, AttributeError):
         # This catches current season, which hasn't gone to jury yet
         pass
     
     return votes, season_num
 
 def get_season_info(url):
-    html= urllib2.urlopen(url)
+    html= urlopen(url)
     soup = BeautifulSoup(html, 'html.parser')
     # collect all link references that begin with /wiki/Survivor:
     season_refs = set(
@@ -87,7 +95,8 @@ def get_season_info(url):
         name = url.split(':_')[-1]
         seasons[name] = {}
         seasons[name]['url'] = url
-    del seasons['Heroes_vs._Villains']  # this one is a repeat
+    #del seasons['Heroes_vs._Villains']  # this one is a repeat
+    del seasons['Ka%C3%B4h_R%C5%8Dng']
         
     return seasons
 
