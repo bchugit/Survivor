@@ -1,4 +1,4 @@
-# TODO: Fix Kaoh Rong, Ordered season list
+# TODO: Ordered season list
 
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
@@ -80,7 +80,7 @@ def get_voting_results(url):
     return votes, season_num
 
 def get_season_info(url):
-    html= urlopen(url)
+    html = urlopen(url)
     soup = BeautifulSoup(html, 'html.parser')
     # collect all link references that begin with /wiki/Survivor:
     season_refs = set(
@@ -95,12 +95,10 @@ def get_season_info(url):
         name = url.split(':_')[-1]
         seasons[name] = {}
         seasons[name]['url'] = url
-    #del seasons['Heroes_vs._Villains']  # this one is a repeat
-    del seasons['Ka%C3%B4h_R%C5%8Dng']
-        
+    seasons['Kaoh Rong'] = seasons.pop('Ka%C3%B4h_R%C5%8Dng')   
     return seasons
 
-def scrape(url="http://survivor.wikia.com/wiki/Main_Page", save_to_disk=True):
+def scrape(url="http://survivor.wikia.com/wiki/Main_Page", save_to_disk=False):
     seasons = get_season_info(url)
     
     for i in seasons.keys():
@@ -112,3 +110,6 @@ def scrape(url="http://survivor.wikia.com/wiki/Main_Page", save_to_disk=True):
     
     return seasons
     
+def get_season_names(seasons):
+    for sname in sorted(seasons):
+        print(sname)
