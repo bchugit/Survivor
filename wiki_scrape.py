@@ -1,18 +1,21 @@
-# TODO: Ordered season list
+# TODO:
+# Ordered season list
+# Get specific season
+# Auto scrape
 
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import re
-
-import numpy as np
 import pandas as pd
 import itertools as iter
-from IPython import display as dis
 import pickle
 
+# Define current season number, not in regular wiki scrape
 current_season_num = 36
 
+
 def parse_td(td):
+
     # Extract text from table data element
     try:
         # if there is a colspan element present ...
@@ -22,40 +25,50 @@ def parse_td(td):
     # (these all end with \n so strip that)
     return [td.text[:-1]] * n  # ... repeat text n times
 
+
 def get_voting_results(url):
     html = urlopen(url)
     soup = BeautifulSoup(html, 'html.parser')
     voting_table = soup.find(id='Voting_History').find_next('table')
-    
+
     # Eliminated
     # find the 'tr' flag right before the 'th' flag with text described by reg. exp.
     # (use iter.chain to flatten list)
-    eliminated = list(iter.chain(*[parse_td(i) for i in 
+    eliminated = list(iter.chain(*[parse_td(i) for i in
               voting_table
               .find('th', text=re.compile(r"(Voted Out|Voted out|Eliminated|Voted Off)"))
               .findPrevious('tr').findAll('td')]))
-    
+
     # we want all rows after the row that starts with "Vote:"
     voting_rows = voting_table.find('th', text=re.compile(r"Vote:")).findAllNext('tr')
     # extract the text from all table data in the rows we just extracted
     votes = [list(iter.chain(*[parse_td(i) for i in j.findAll('td')])) for j in voting_rows]
-    
+
     # convert to pandas data frame
     votes = pd.DataFrame(votes)
+
     # the contestant casting the vote is in the second row - make that the index
     votes.index = votes[1]
+
     # now we can drop the first two columns
     votes.drop(votes.columns[[0, 1]], inplace=True, axis=1)
+
     # drop any rows where the index is None
-    votes.drop(votes.index[[i == None for i in votes.index]], inplace=True, axis=0)
+    votes.drop(votes.index[[i is None for i in votes.index]], inplace=True, axis=0)
+
+    # drop any rows containing Notes
+    votes = votes.loc[~votes.index.str.contains('Notes'), :]
+
     # Our columns correspond to those eliminated (from above)
     # There appears to be an extra column. Drop anthing beyoned the elimination info we have
     votes = votes[votes.columns[[range(len(eliminated))]]]
+
     # rename columns to be the eliminated contestants
     votes.columns = [e.strip() for e in eliminated]
+
     # find the season number
     summary_table = soup.find('table', {'class': "toccolours"})
-    
+
     # Current season does not have number listed, have to hard code
     try:
         season_num = int(summary_table.find(string=re.compile("Season No."))
@@ -76,8 +89,8 @@ def get_voting_results(url):
     except (TypeError, AttributeError):
         # This catches current season, which hasn't gone to jury yet
         pass
-    
     return votes, season_num
+
 
 def get_season_info(url):
     html = urlopen(url)
@@ -95,21 +108,23 @@ def get_season_info(url):
         name = url.split(':_')[-1]
         seasons[name] = {}
         seasons[name]['url'] = url
-    seasons['Kaoh Rong'] = seasons.pop('Ka%C3%B4h_R%C5%8Dng')   
+    seasons['Kaoh Rong'] = seasons.pop('Ka%C3%B4h_R%C5%8Dng')
     return seasons
+
 
 def scrape(url="http://survivor.wikia.com/wiki/Main_Page", save_to_disk=False):
     seasons = get_season_info(url)
-    
+
     for i in seasons.keys():
-        season = seasons[i]  #A dictionary
+        season = seasons[i]  # Dictionary
         season['votes'], season['num'] = get_voting_results(season['url'])
-    
+
     if save_to_disk:
-        pickle.dump( seasons, open( "wiki_scrape.p", "wb" ) )
-    
+        pickle.dump(seasons, open("wiki_scrape.p", "wb"))
+
     return seasons
-    
+
+
 def get_season_names(seasons):
     for sname in sorted(seasons):
         print(sname)
