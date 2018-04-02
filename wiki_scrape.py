@@ -2,6 +2,7 @@
 # Ordered season list
 # Get specific season
 # Auto scrape
+# Remove footnotes  
 
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
@@ -23,7 +24,7 @@ def parse_td(td):
     except KeyError:
         n = 1
     # (these all end with \n so strip that)
-    return [td.text[:-1]] * n  # ... repeat text n times
+    return [td.text[:-1].strip()] * n  # ... repeat text n times
 
 
 def get_voting_results(url):
@@ -47,8 +48,9 @@ def get_voting_results(url):
     # convert to pandas data frame
     votes = pd.DataFrame(votes)
 
-    # the contestant casting the vote is in the second row - make that the index
-    votes.index = votes[1]
+    # the contestant casting the vote is in the second row 
+    # - make that the index, remove footnote numbers
+    votes.index = votes[1].str.replace(r'[\d]+', '')
 
     # now we can drop the first two columns
     votes.drop(votes.columns[[0, 1]], inplace=True, axis=1)
@@ -60,7 +62,7 @@ def get_voting_results(url):
     votes = votes.loc[~votes.index.str.contains('Notes'), :]
 
     # Our columns correspond to those eliminated (from above)
-    # There appears to be an extra column. Drop anthing beyoned the elimination info we have
+    # There appears to be an extra column. Drop anthing beyond the elimination info we have
     votes = votes[votes.columns[[range(len(eliminated))]]]
 
     # rename columns to be the eliminated contestants

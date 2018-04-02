@@ -1,3 +1,7 @@
+# TODO
+# Percent of same votes vs. total sum
+#   Accounts for times going to tribal council
+
 import pandas as pd
 import numpy as np
 import pickle
@@ -27,8 +31,8 @@ def compare_votes(votes_all):
 
     for (i, j) in iter.combinations(range(votes.shape[0]), 2):
         like_votes[i, j] = sum((votes.iloc[i, :] == votes.iloc[j, :]) &  #same vote
-                               (votes.iloc[i, :] != u' \u2014') &  #ignore '-' (didn't vote)
-                               (votes.iloc[i, :] != ' None') &  #ignore None (didn't vote)
+                               (votes.iloc[i, :] != u'\u2014') &  #ignore '-' (didn't vote)
+                               (votes.iloc[i, :] != 'None') &  #ignore None (didn't vote)
                                (votes.iloc[i, :] != ''))  #ignore blanks (already eliminated)
 
     like_votes = pd.DataFrame(like_votes)
