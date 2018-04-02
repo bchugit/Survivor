@@ -2,7 +2,6 @@
 # Ordered season list
 # Get specific season
 # Auto scrape
-# Remove footnotes  
 
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
@@ -114,7 +113,7 @@ def get_season_info(url):
     return seasons
 
 
-def scrape(url="http://survivor.wikia.com/wiki/Main_Page", save_to_disk=False):
+def scrape_all(url="http://survivor.wikia.com/wiki/Main_Page", save_to_disk=False):
     seasons = get_season_info(url)
 
     for i in seasons.keys():
@@ -130,3 +129,9 @@ def scrape(url="http://survivor.wikia.com/wiki/Main_Page", save_to_disk=False):
 def get_season_names(seasons):
     for sname in sorted(seasons):
         print(sname)
+
+
+def order_seasons(seasons):
+    ordered_df = pd.DataFrame(list({k: seasons[k]['num'] for k in seasons.keys()}.items()),
+             columns=['season', 'snum']).sort_values('snum').set_index('season')
+    return ordered_df
